@@ -54,6 +54,7 @@ COPY --from=bitcoin-core /opt /opt
 
 ADD *.sh /
 ADD bitcoin.conf /root/.bitcoin/
+VOLUME ["/root/.bitcoin/regtest"]
 
-EXPOSE 19000 19001
+EXPOSE 19000 19001 28332
 ENTRYPOINT ["/entrypoint.sh"]
