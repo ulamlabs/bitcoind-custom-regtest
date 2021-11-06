@@ -1,10 +1,15 @@
-# bitcoind-custom-regtest
+# bitcoind-custom-regtest with Bloom filtering enabled
+
+Forked from [ulamlabs/bitcoind-custom-regtest](https://github.com/ulamlabs/bitcoind-custom-regtest).
+
+GitHub Repository is available at [mentiflectax/bitcoind-custom-regtest](https://github.com/mentiflectax/bitcoind-custom-regtest).
+
+---
 
 [![](https://images.microbadger.com/badges/version/ulamlabs/bitcoind-custom-regtest.svg)](https://microbadger.com/images/ulamlabs/bitcoind-custom-regtest "Get your own version badge on microbadger.com")
 
 Patched version of Bitcoin regtest with halving interval increased to mainnet and testnet values. Halving occurs every 210000 blocks, instead of default 150.
 
-GitHub Repository is available at [ulamlabs/bitcoind-custom-regtest](https://github.com/ulamlabs/bitcoind-custom-regtest).
 
 ## Building
 
