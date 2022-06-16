@@ -21,7 +21,8 @@ FROM alpine as bitcoin-core
 COPY --from=berkeleydb /opt /opt
 
 RUN apk --no-cache add autoconf automake boost-dev build-base chrpath file \
-    gnupg libevent-dev libressl libressl-dev libtool protobuf-dev zeromq-dev
+    gnupg libevent-dev libressl libressl-dev libtool protobuf-dev zeromq-dev \
+	sqlite-dev
 
 ENV BITCOIN_VERSION=23.0
 
@@ -39,6 +40,7 @@ RUN tar -xzf *.tar.gz \
     --with-gui=no \
     --enable-util-cli \
     --with-daemon \
+	--with-sqlite=yes\
     && make -j4 \
     && make install \
     && strip /opt/bitcoin/bin/bitcoin-cli \
