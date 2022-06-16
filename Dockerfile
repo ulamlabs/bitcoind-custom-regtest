@@ -23,9 +23,9 @@ COPY --from=berkeleydb /opt /opt
 RUN apk --no-cache add autoconf automake boost-dev build-base chrpath file \
     gnupg libevent-dev libressl libressl-dev libtool protobuf-dev zeromq-dev
 
-ENV BITCOIN_VERSION=0.19.1
+ENV BITCOIN_VERSION=23.0
 
-RUN wget https://github.com/bitcoin/bitcoin/archive/v${BITCOIN_VERSION}.tar.gz
+RUN wget https://github.com/bitcoin/bitcoin/archive/refs/tags/v${BITCOIN_VERSION}.tar.gz
 RUN tar -xzf *.tar.gz \
     && cd bitcoin-${BITCOIN_VERSION} \
     && sed -i 's/consensus.nSubsidyHalvingInterval = 150/consensus.nSubsidyHalvingInterval = 210000/g' src/chainparams.cpp \
