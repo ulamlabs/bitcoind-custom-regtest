@@ -20,6 +20,7 @@ FROM alpine as bitcoin-core
 
 COPY --from=berkeleydb /opt /opt
 
+RUN apk update
 RUN apk --no-cache add autoconf automake boost-dev build-base chrpath file \
     gnupg libevent-dev libressl libressl-dev libtool protobuf-dev zeromq-dev \
 	sqlite-dev
