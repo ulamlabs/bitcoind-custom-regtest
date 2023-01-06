@@ -42,7 +42,7 @@ RUN apk add \
 		zeromq-dev \
 		sqlite-dev
 
-ENV BITCOIN_VERSION=23.0
+ENV BITCOIN_VERSION=24.0.1
 RUN wget https://github.com/bitcoin/bitcoin/archive/refs/tags/v${BITCOIN_VERSION}.tar.gz
 
 RUN tar -xzf *.tar.gz \
