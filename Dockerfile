@@ -49,8 +49,8 @@ RUN cd depends \
 	   NO_QR=1 \
 	   #NO_ZMQ=0 \
 	   #NO_WALLET=0 \
-	   NO_BDB=1 \
-	   #NO_SQLITE=0 \
+	   #NO_BDB=0 \  #Needs bdb for legacy wallets to be enabled see line 407 of src/wallet/rpc/wallet.cpp \
+	   NO_SQLITE=1 \
 	   #NO_NATPMP=0 \
 	   #NO_UPNP=0 \
 	   #NO_NATPMP=0 \
@@ -61,7 +61,7 @@ RUN cd depends \
     && /opt/bitcoin/configure \
 	  --prefix=/opt/build \
 	  --with-gui=no \
-	  #--with-sqlite=no \
+	  --with-sqlite=no \
 	  --disable-bench \
 	  --disable-gui-tests \
 	  --disable-fuzz \
@@ -70,20 +70,20 @@ RUN cd depends \
 	  --disable-man \
 	  --disable-tests \
 	  --enable-util-cli \
-	&& make -j 4 \
+	&& make -j \
 	&& make install \
-    && strip /opt/build/bin/bitcoin-cli \
-    && strip /opt/build/bin/bitcoind \
-	&& make clean 
+	&& make clean \
+    && strip /opt/build/bin/*
 
 # Build stage for compiled artifacts
 FROM alpine:latest as final-image
 
 RUN apk update && \
     apk add --no-cache\
+		libstdc++ \
 		bash 
 
-ENV PATH=/opt/bitcoin/bin:$PATH
+ENV PATH=/opt/bin:$PATH
 
 COPY --from=bitcoin-core /opt/build /opt
 
