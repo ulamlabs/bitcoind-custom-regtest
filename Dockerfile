@@ -100,3 +100,7 @@ VOLUME ["/root/.bitcoin/regtest"]
 EXPOSE 19000 19001 28332
 ENTRYPOINT ["/entrypoint.sh"]
 
+COPY healthcheck.sh /healthcheck.sh
+HEALTHCHECK --interval=12s --timeout=12s --start-period=30s \  
+    CMD /healthcheck.sh 
+
