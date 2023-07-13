@@ -85,9 +85,11 @@ RUN cd depends \
 FROM alpine:latest as final-image
 
 RUN apk update && \
-    apk add --no-cache\
+    apk add --no-cache \
 		libstdc++ \
-		bash 
+		bash \
+		jq \
+		curl
 
 ENV PATH=/opt/bin:$PATH
 
@@ -98,9 +100,10 @@ ADD bitcoin.conf /root/.bitcoin/
 VOLUME ["/root/.bitcoin/regtest"]
 
 EXPOSE 19000 19001 28332
+COPY entrypoint.sh /entrypoint.sh
 ENTRYPOINT ["/entrypoint.sh"]
 
 COPY healthcheck.sh /healthcheck.sh
-HEALTHCHECK --interval=12s --timeout=12s --start-period=30s \  
+HEALTHCHECK --interval=1s --timeout=12s --start-period=60s \  
     CMD /healthcheck.sh 
 

@@ -1,6 +1,6 @@
-#!/usr/bin/bash
+#!/bin/bash
 
-RESULT=`curl -s --fail --user "test:test" --data-binary '{"jsonrpc": "1.0", "id": "curltest", "method": "uptime", "params": []}' -H 'content-type: text/plain;' http://127.0.0.1:8332/`
+RESULT=`curl -s --fail --user "test:test" --data-binary '{"jsonrpc": "1.0", "id": "curltest", "method": "uptime", "params": []}' -H 'content-type: text/plain;' http://127.0.0.1:19001/`
 
 if [ $? -eq 0 ]
 then
