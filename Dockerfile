@@ -4,15 +4,15 @@ FROM alpine:latest as bitcoin-core
 ######### Optional things to adjust ########
 # Maxing out processors was killing my docker instance, so here's a place to 
 # manually set how many you want to use.
-ARG NUM_PROCESSES=6 
+ARG NUM_PROCESSES=16 
 
 # Build a specific bitcoin branch
-ARG BITCOIN_BRANCH=25.x
+ARG BITCOIN_BRANCH=26.x
 ###########################################
 
 # Install build tools
 RUN apk update && \
-    apk add \
+    apk add --no-cache \
 		autoconf \
 		automake \
 		bash \
@@ -22,17 +22,6 @@ RUN apk update && \
 		pkgconfig \
 		libtool 
 
-## build utilities for depends on linux see bitcoin*/depends/README.md
-RUN apk add \
-		make \
-		automake \
-		cmake \
-		libtool \
-		binutils \
-		pkgconfig \
-		python3 \
-		patch \
-		bison
 
 RUN mkdir -p /opt/build
 
@@ -42,6 +31,23 @@ RUN git config --global http.postBuffer 524288000
 
 RUN git clone -v -j${NUM_PROCESSES} --single-branch --branch ${BITCOIN_BRANCH} https://github.com/bitcoin/bitcoin.git
 
+## build utilities for depends on linux see bitcoin*/depends/README.md
+RUN apk add --no-cache \
+		automake \
+		binutils \
+		bison \
+		boost \
+		boost-dev \
+		cmake \
+		curl \
+		libevent \
+		libevent-dev \
+		libtool \
+		make \
+		patch \
+		pkgconfig \
+		python3
+
 ## see other architecture options in bitcoin/depends/README.md
 ARG CONFIG_SITE=/opt/bitcoin/depends/x86_64-pc-linux-musl/share/config.site
 
@@ -49,8 +55,8 @@ WORKDIR /opt/bitcoin
 
 RUN cd depends \
     && make -j ${NUM_PROCESSES} \
-	   #NO_BOOST=0 \
-	   #NO_LIBEVENT=0 \
+	   NO_BOOST=0 \
+	   NO_LIBEVENT=0 \
 	   NO_QT=1 \
 	   NO_QR=1 \
 	   #NO_ZMQ=0 \
@@ -101,7 +107,7 @@ VOLUME ["/root/.bitcoin/regtest"]
 
 EXPOSE 19000 19001 28332
 COPY entrypoint.sh /entrypoint.sh
-ENTRYPOINT ["/entrypoint.sh"]
+#ENTRYPOINT ["/entrypoint.sh"]
 
 COPY healthcheck.sh /healthcheck.sh
 HEALTHCHECK --interval=1s --timeout=12s --start-period=60s \  
