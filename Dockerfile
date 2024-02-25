@@ -19,10 +19,14 @@ RUN apk update && \
 		bash \
 		binutils \
 		bison \
+		boost \
+		boost-dev \
 		build-base \
 		cmake \
 		curl \
 		git \
+		libevent \
+		libevent-dev \
 		libtool \
 		make \
 		patch \
