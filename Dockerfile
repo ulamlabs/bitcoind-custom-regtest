@@ -7,32 +7,27 @@ FROM alpine:latest as bitcoin-core
 ARG NUM_PROCESSES=6 
 
 # Build a specific bitcoin branch
-ARG BITCOIN_BRANCH=25.x
+ARG BITCOIN_BRANCH=26.x
 ###########################################
 
 # Install build tools
+# and build utilities for depends on linux see bitcoin*/depends/README.md
 RUN apk update && \
-    apk add \
+    apk add --no-cache \
 		autoconf \
 		automake \
 		bash \
+		binutils \
+		bison \
 		build-base \
+		cmake \
 		curl \
 		git \
-		pkgconfig \
-		libtool 
-
-## build utilities for depends on linux see bitcoin*/depends/README.md
-RUN apk add \
-		make \
-		automake \
-		cmake \
 		libtool \
-		binutils \
-		pkgconfig \
-		python3 \
+		make \
 		patch \
-		bison
+		pkgconfig \
+		python3 
 
 RUN mkdir -p /opt/build
 
