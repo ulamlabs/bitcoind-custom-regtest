@@ -19,14 +19,10 @@ RUN apk update && \
 		bash \
 		binutils \
 		bison \
-		boost \
-		boost-dev \
 		build-base \
 		cmake \
 		curl \
 		git \
-		libevent \
-		libevent-dev \
 		libtool \
 		make \
 		patch \
@@ -46,49 +42,61 @@ ARG CONFIG_SITE=/opt/bitcoin/depends/x86_64-pc-linux-musl/share/config.site
 
 WORKDIR /opt/bitcoin
 
-RUN cd depends \
-    && make -j ${NUM_PROCESSES} \
-	   #NO_BOOST=0 \
-	   #NO_LIBEVENT=0 \
-	   NO_QT=1 \
+# This is going to install libevent, boost, sqlite and bdb
+# Getting compatible versions of those from the package manager was harder than
+# just compiling them with the depends make scripts
+#
+# bdb is needed in v26 for the createwallet RPC call to work. 
+# SQLite is supposed to work for createwallets but it's not working in v26 yet.
+RUN cd depends && \
+	make -j ${NUM_PROCESSES} install \
 	   NO_QR=1 \
-	   #NO_ZMQ=0 \
-	   #NO_WALLET=0 \
-	   #NO_BDB=0 \  #Needs bdb for legacy wallets to be enabled see line 407 of src/wallet/rpc/wallet.cpp \
-	   NO_SQLITE=1 \
-	   #NO_NATPMP=0 \
-	   #NO_UPNP=0 \
-	   #NO_NATPMP=0 \
-	   NO_USDT=1 \
-	   #NO_HARDEN=0 \ 
-	&& cd /opt/bitcoin \
-	&& /opt/bitcoin/autogen.sh \
-    && /opt/bitcoin/configure \
+	   NO_QT=1 \
+	   NO_USDT=1  
+#	   NO_BDB=0 \
+#	   NO_BOOST=0 \
+#	   NO_HARDEN=0  
+#	   NO_LIBEVENT=0 \
+#	   NO_NATPMP=0 \
+#	   NO_SQLITE=0 \
+#	   NO_UPNP=0 \
+#	   NO_WALLET=0 \
+#	   NO_ZMQ=0 \
+
+RUN cd /opt/bitcoin && \
+	/opt/bitcoin/autogen.sh && \
+	/opt/bitcoin/configure \
 	  --prefix=/opt/build \
+	  --with-sqlite \
+	  --with-bdb \
+	  --with-utils \
+	  --with-libs \
 	  --with-gui=no \
-	  --with-sqlite=no \
+	  --without-qrencode \
+      --enable-wallet \
 	  --disable-bench \
 	  --disable-gui-tests \
 	  --disable-fuzz \
 	  --disable-fuzz-binary \
 	  --disable-gprof \
 	  --disable-man \
+	  --disable-usdt \
 	  --disable-tests \
-	  --enable-util-cli \
-	&& make -j ${NUM_PROCESSES} \
-	&& make install \
-	&& make clean \
-    && strip /opt/build/bin/*
+	  --enable-util-cli && \
+	make -j ${NUM_PROCESSES} install && \
+	strip /opt/build/bin/*
 
-# Build stage for compiled artifacts
+### Build stage for compiled artifacts
 FROM alpine:latest as final-image
 
+#jq and curl needed for the healthcheck script
 RUN apk update && \
     apk add --no-cache \
 		libstdc++ \
 		bash \
-		jq \
-		curl
+		binutils \
+		curl \
+		jq 
 
 ENV PATH=/opt/bin:$PATH
 
