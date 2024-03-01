@@ -1,60 +1,116 @@
-# Build stage for BerkeleyDB
-FROM alpine as berkeleydb
-
-RUN apk --no-cache add autoconf automake build-base
-
-ENV BERKELEYDB_VERSION=db-4.8.30.NC
-
-RUN wget https://download.oracle.com/berkeley-db/${BERKELEYDB_VERSION}.tar.gz
-RUN tar -xzf *.tar.gz \
-    && sed s/__atomic_compare_exchange/__atomic_compare_exchange_db/g -i ${BERKELEYDB_VERSION}/dbinc/atomic.h \
-    && mkdir -p /opt/db \
-    && cd /${BERKELEYDB_VERSION}/build_unix \
-    && ../dist/configure --enable-cxx --disable-shared --with-pic --prefix=/opt/db \
-    && make -j4 \
-    && make install \
-    && rm -rf /opt/db/docs
-
 # Build stage for Bitcoin Core
-FROM alpine as bitcoin-core
+FROM alpine:latest as bitcoin-core
 
-COPY --from=berkeleydb /opt /opt
+######### Optional things to adjust ########
+# Maxing out processors was killing my docker instance, so here's a place to 
+# manually set how many you want to use.
+ARG NUM_PROCESSES=6 
 
-RUN apk --no-cache add autoconf automake boost-dev build-base chrpath file \
-    gnupg libevent-dev libressl libressl-dev libtool protobuf-dev zeromq-dev
+# Build a specific bitcoin branch
+ARG BITCOIN_BRANCH=26.x
+###########################################
 
-ENV BITCOIN_VERSION=0.19.1
+# Install build tools
+# and build utilities for depends on linux see bitcoin*/depends/README.md
+RUN apk update && \
+    apk add --no-cache \
+		autoconf \
+		automake \
+		bash \
+		binutils \
+		bison \
+		build-base \
+		cmake \
+		curl \
+		git \
+		libtool \
+		make \
+		patch \
+		pkgconfig \
+		python3 
 
-RUN wget https://github.com/bitcoin/bitcoin/archive/v${BITCOIN_VERSION}.tar.gz
-RUN tar -xzf *.tar.gz \
-    && cd bitcoin-${BITCOIN_VERSION} \
-    && sed -i 's/consensus.nSubsidyHalvingInterval = 150/consensus.nSubsidyHalvingInterval = 210000/g' src/chainparams.cpp \
-    && ./autogen.sh \
-    && ./configure LDFLAGS=-L`ls -d /opt/db`/lib/ CPPFLAGS=-I`ls -d /opt/db`/include/ \
-    --prefix=/opt/bitcoin \
-    --disable-man \
-    --disable-tests \
-    --disable-bench \
-    --disable-ccache \
-    --with-gui=no \
-    --enable-util-cli \
-    --with-daemon \
-    && make -j4 \
-    && make install \
-    && strip /opt/bitcoin/bin/bitcoin-cli \
-    && strip /opt/bitcoin/bin/bitcoind
+RUN mkdir -p /opt/build
 
-# Build stage for compiled artifacts
-FROM alpine
+WORKDIR /opt
 
-RUN apk --no-cache add boost bash libevent libzmq libressl
-ENV PATH=/opt/bitcoin/bin:$PATH
+RUN git config --global http.postBuffer 524288000  
 
-COPY --from=bitcoin-core /opt /opt
+RUN git clone -v -j${NUM_PROCESSES} --single-branch --branch ${BITCOIN_BRANCH} https://github.com/bitcoin/bitcoin.git
+
+## see other architecture options in bitcoin/depends/README.md
+ARG CONFIG_SITE=/opt/bitcoin/depends/x86_64-pc-linux-musl/share/config.site
+
+WORKDIR /opt/bitcoin
+
+# This is going to install libevent, boost, sqlite and bdb
+# Getting compatible versions of those from the package manager was harder than
+# just compiling them with the depends make scripts
+#
+# bdb is needed in v26 for the createwallet RPC call to work. 
+# SQLite is supposed to work for createwallets but it's not working in v26 yet.
+RUN cd depends && \
+	make -j ${NUM_PROCESSES} install \
+	   NO_QR=1 \
+	   NO_QT=1 \
+	   NO_USDT=1  
+#	   NO_BDB=0 \
+#	   NO_BOOST=0 \
+#	   NO_HARDEN=0  
+#	   NO_LIBEVENT=0 \
+#	   NO_NATPMP=0 \
+#	   NO_SQLITE=0 \
+#	   NO_UPNP=0 \
+#	   NO_WALLET=0 \
+#	   NO_ZMQ=0 \
+
+RUN cd /opt/bitcoin && \
+	/opt/bitcoin/autogen.sh && \
+	/opt/bitcoin/configure \
+	  --prefix=/opt/build \
+	  --with-sqlite \
+	  --with-bdb \
+	  --with-utils \
+	  --with-libs \
+	  --with-gui=no \
+	  --without-qrencode \
+      --enable-wallet \
+	  --disable-bench \
+	  --disable-gui-tests \
+	  --disable-fuzz \
+	  --disable-fuzz-binary \
+	  --disable-gprof \
+	  --disable-man \
+	  --disable-usdt \
+	  --disable-tests \
+	  --enable-util-cli && \
+	make -j ${NUM_PROCESSES} install && \
+	strip /opt/build/bin/*
+
+### Build stage for compiled artifacts
+FROM alpine:latest as final-image
+
+#jq and curl needed for the healthcheck script
+RUN apk update && \
+    apk add --no-cache \
+		libstdc++ \
+		bash \
+		binutils \
+		curl \
+		jq 
+
+ENV PATH=/opt/bin:$PATH
+
+COPY --from=bitcoin-core /opt/build /opt
 
 ADD *.sh /
 ADD bitcoin.conf /root/.bitcoin/
 VOLUME ["/root/.bitcoin/regtest"]
 
 EXPOSE 19000 19001 28332
+COPY entrypoint.sh /entrypoint.sh
 ENTRYPOINT ["/entrypoint.sh"]
+
+COPY healthcheck.sh /healthcheck.sh
+HEALTHCHECK --interval=1s --timeout=12s --start-period=60s \  
+    CMD /healthcheck.sh 
+
